@@ -1,0 +1,55 @@
+<idea-plugin version="2">
+    <id>ro.catalin.prata.tfuploader</id>
+    <name>TF Uploader</name>
+    <version>1.0</version>
+    <vendor email="prata.catalin@gmail.com" url="http://myandroidsolutions.blogspot.ro/">My Blog</vendor>
+
+    <description><![CDATA[
+      TF Uploader helps you upload your Android builds to Test Flight without having to open the browser and got to your project's page. <br />
+      You just have to add the notes of your new build, set the path for the build (only once), add a team and the upload API token from test flight site and you are ready to send the Android builds right from your favorite IDE.
+      ]]></description>
+
+    <change-notes><![CDATA[
+      First release, please send bug reports to my email so I can make this plugin better.
+      ]]>
+    </change-notes>
+
+    <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Build+Number+Ranges for description -->
+    <idea-version since-build="107.105"/>
+
+    <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Plugin+Compatibility+with+IntelliJ+Platform+Products
+         on how to target different products -->
+    <!-- uncomment to enable plugin in all products
+    <depends>com.intellij.modules.lang</depends>
+    -->
+    <!--This allow plugin to be installed on another IntelliJ Platform products-->
+    <depends>com.intellij.modules.lang</depends>
+
+    <application-components>
+
+        <!-- Add your application components here -->
+
+    </application-components>
+
+    <project-components>
+        <!-- Add your project components here -->
+    </project-components>
+
+    <actions>
+        <!-- Add your actions here -->
+        <!--<action id="TFUploader" class="ro.catalin.prata.testflightuploader.SendBuildAction" text="Upload To TestFlight"-->
+        <!--description="Uploads an Android build to TestFlight">-->
+        <!--<add-to-group group-id="BuildMenu" anchor="first"/>-->
+        <!--<keyboard-shortcut keymap="$default" first-keystroke="ctrl alt U"/>-->
+        <!--</action>-->
+    </actions>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <applicationService serviceImplementation="ro.catalin.prata.testflightuploader.controller.KeysManager"/>
+        <!-- Add your extensions here -->
+        <toolWindow id="TF Uploader" secondary="true" anchor="right"
+                    factoryClass="ro.catalin.prata.testflightuploader.view.TFUploader">
+        </toolWindow>
+    </extensions>
+
+</idea-plugin>
