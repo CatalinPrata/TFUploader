@@ -19,11 +19,10 @@
 
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Plugin+Compatibility+with+IntelliJ+Platform+Products
          on how to target different products -->
-    <!-- uncomment to enable plugin in all products
-    <depends>com.intellij.modules.lang</depends>
-    -->
+
     <!--This allow plugin to be installed on another IntelliJ Platform products-->
     <depends>com.intellij.modules.lang</depends>
+    <depends>org.jetbrains.android</depends>
 
     <application-components>
 
@@ -47,7 +46,7 @@
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="ro.catalin.prata.testflightuploader.controller.KeysManager"/>
         <!-- Add your extensions here -->
-        <toolWindow id="TF Uploader" secondary="true" anchor="right"
+        <toolWindow id="TF Uploader" secondary="true" anchor="right" icon="icon.png"
                     factoryClass="ro.catalin.prata.testflightuploader.view.TFUploader">
         </toolWindow>
     </extensions>

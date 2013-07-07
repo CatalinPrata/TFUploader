@@ -1,9 +1,13 @@
 package ro.catalin.prata.testflightuploader.view;
 
+import com.intellij.facet.FacetManager;
+import com.intellij.facet.FacetTypeId;
 import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.fileTypes.FileTypeManager;
+import com.intellij.openapi.module.Module;
+import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ProjectManager;
 import com.intellij.openapi.ui.Messages;
@@ -13,6 +17,8 @@ import com.intellij.openapi.wm.ToolWindowFactory;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
 import com.jgoodies.common.collect.ArrayListModel;
+import org.jetbrains.android.facet.AndroidFacet;
+import org.jetbrains.android.facet.AndroidRootUtil;
 import ro.catalin.prata.testflightuploader.Model.Team;
 import ro.catalin.prata.testflightuploader.controller.KeysManager;
 import ro.catalin.prata.testflightuploader.provider.UploadService;
@@ -21,10 +27,7 @@ import ro.catalin.prata.testflightuploader.utils.Utils;
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
+import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -61,6 +64,13 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
     private JTextField apkFilePathTextField;
     private JButton setApiKeyButton;
     private JTextArea distributionsListTextArea;
+    private JTextField buildVNameTextField;
+    private JTextField buildVCodeTextField;
+    private JButton buildVersionHelpBtn;
+    private JLabel manifestPathLbl;
+    private JCheckBox buildVersionCheck;
+    private JLabel bVersionCodeLbl;
+    private JLabel bVersionNameLbl;
     private JPanel browsePanel;
     private JLabel resultLabel;
     private ToolWindow myToolWindow;
@@ -218,8 +228,14 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
             apkFilePathTextField.setText(KeysManager.instance().getApkFilePath());
         }
 
+
+
+
         // set the distribution list input disabled by default
         distributionsListTextArea.setEnabled(false);
+
+        // hide the build version change feature components by default
+        setBuildFeatureComponentsVisible(false);
 
         teamList.addListSelectionListener(new ListSelectionListener() {
             @Override
@@ -256,6 +272,57 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
 
             }
         });
+        buildVersionHelpBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+
+                // build version info button was pressed, display the about text...
+                Messages.showInfoMessage("This feature let you change the version code/name of the build right before it is sent to TestFlight.\n" +
+                        "If you change the values of the build version code or name, it will be saved in your main manifest file and the project will be rebuild. \n" +
+                        "This can be useful to remind you to increment the build number before sending the apk to TestFlight.",
+                        "Android build version code/name update");
+
+            }
+        });
+
+        buildVersionCheck.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+
+                if (buildVersionCheck.isSelected()) {
+
+                    setBuildFeatureComponentsVisible(true);
+
+                } else {
+
+                    setBuildFeatureComponentsVisible(false);
+
+                }
+
+//                Module[] modules = ModuleManager.getInstance(ProjectManager.getInstance().getOpenProjects()[0]).getSortedModules();
+//                Module module = modules[modules.length-1];
+//                AndroidFacet facet = AndroidFacet.getInstance(module);
+//                String apkPath = AndroidRootUtil.getApkPath(facet);
+//                apkFilePathTextField.setText(apkPath);
+
+            }
+        });
+
+    }
+
+    /**
+     * Changes the components visibility of the build version changing feature
+     *
+     * @param visible true if the components should be displayed, false otherwise
+     */
+    public void setBuildFeatureComponentsVisible(boolean visible) {
+
+        bVersionCodeLbl.setVisible(visible);
+        bVersionNameLbl.setVisible(visible);
+        manifestPathLbl.setVisible(visible);
+        buildVCodeTextField.setVisible(visible);
+        buildVNameTextField.setVisible(visible);
+
     }
 
     /**
