@@ -22,6 +22,7 @@
 
     <!--This allow plugin to be installed on another IntelliJ Platform products-->
     <depends>com.intellij.modules.lang</depends>
+    <!-- This tells the jetbrains plugin repository that the plugin uses the android jar -->
     <depends>org.jetbrains.android</depends>
 
     <application-components>
@@ -44,6 +45,7 @@
     </actions>
 
     <extensions defaultExtensionNs="com.intellij">
+        <!-- Lets us persist data using the KeyManager -->
         <applicationService serviceImplementation="ro.catalin.prata.testflightuploader.controller.KeysManager"/>
         <!-- Add your extensions here -->
         <toolWindow id="TF Uploader" secondary="true" anchor="right" icon="icon.png"

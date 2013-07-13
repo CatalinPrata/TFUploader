@@ -1,13 +1,10 @@
 package ro.catalin.prata.testflightuploader.view;
 
-import com.intellij.facet.FacetManager;
-import com.intellij.facet.FacetTypeId;
 import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.fileTypes.FileTypeManager;
 import com.intellij.openapi.module.Module;
-import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ProjectManager;
 import com.intellij.openapi.ui.Messages;
@@ -17,10 +14,9 @@ import com.intellij.openapi.wm.ToolWindowFactory;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
 import com.jgoodies.common.collect.ArrayListModel;
-import org.jetbrains.android.facet.AndroidFacet;
-import org.jetbrains.android.facet.AndroidRootUtil;
 import ro.catalin.prata.testflightuploader.Model.Team;
 import ro.catalin.prata.testflightuploader.controller.KeysManager;
+import ro.catalin.prata.testflightuploader.controller.ModulesManager;
 import ro.catalin.prata.testflightuploader.provider.UploadService;
 import ro.catalin.prata.testflightuploader.utils.Utils;
 
@@ -67,14 +63,11 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
     private JTextField buildVNameTextField;
     private JTextField buildVCodeTextField;
     private JButton buildVersionHelpBtn;
-    private JLabel manifestPathLbl;
     private JCheckBox buildVersionCheck;
     private JLabel bVersionCodeLbl;
     private JLabel bVersionNameLbl;
-    private JPanel browsePanel;
-    private JLabel resultLabel;
-    private ToolWindow myToolWindow;
-
+    private JComboBox moduleCombo;
+    private JTextPane pleaseNoteThatOnlyTextPane;
 
     public TFUploader() {
 
@@ -84,40 +77,7 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
         uploadButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
 
-                if (KeysManager.instance().getApiKey() == null) {
-
-                    Messages.showErrorDialog("The Test Flight API token is not set. Please press the 'Set Api Token' button to add your Test Flight API token.",
-                            "Invalid Test Flight API Token");
-
-                } else if (teamList.getSelectedIndex() < 1) {
-
-                    Messages.showErrorDialog("Please add/select a team to send the build to.",
-                            "Invalid Test Flight Team");
-
-                } else if (apkFilePathTextField.getText().length() < 3) {
-
-                    Messages.showErrorDialog("Please select the apk file to be sent to Test Flight.",
-                            "Invalid Test Flight APK File");
-
-                } else if (whatIsNewTextField.getText().length() < 2) {
-
-                    Messages.showErrorDialog("Please add a release note text.",
-                            "Invalid Build Release Notes");
-
-                } else {
-
-                    progressBar.setVisible(true);
-                    uploadButton.setEnabled(false);
-                    uploadButton.setText("Uploading...");
-
-                    // upload the build
-                    new UploadService().sendBuild(null, apkFilePathTextField.getText(), KeysManager.instance().getApiKey(),
-                            KeysManager.instance().getTeamList().get(teamList.getSelectedIndex()).getToken(),
-                            whatIsNewTextField.getText(),
-                            KeysManager.instance().getTeamList().get(teamList.getSelectedIndex()).getDistributionList(),
-                            notifyTeamCheckBox.isSelected(), TFUploader.this);
-
-                }
+                performUploadValidation();
 
             }
         });
@@ -223,20 +183,6 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
             }
         });
 
-        if (KeysManager.instance().getApkFilePath() != null) {
-            // restore the apk file path if was saved
-            apkFilePathTextField.setText(KeysManager.instance().getApkFilePath());
-        }
-
-
-
-
-        // set the distribution list input disabled by default
-        distributionsListTextArea.setEnabled(false);
-
-        // hide the build version change feature components by default
-        setBuildFeatureComponentsVisible(false);
-
         teamList.addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent e) {
@@ -272,14 +218,16 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
 
             }
         });
+
         buildVersionHelpBtn.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
 
                 // build version info button was pressed, display the about text...
-                Messages.showInfoMessage("This feature let you change the version code/name of the build right before it is sent to TestFlight.\n" +
-                        "If you change the values of the build version code or name, it will be saved in your main manifest file and the project will be rebuild. \n" +
-                        "This can be useful to remind you to increment the build number before sending the apk to TestFlight.",
+                Messages.showInfoMessage("This feature let you change the version code/name of the build after it is sent to Test Flight.\n" +
+                        "If you change the values of the build version code or name, it will be saved in your main manifest file. \n" +
+                        "This can be useful to remind you to increment the build number after sending the apk to TestFlight. \n \n" +
+                        "Please note that the change is made after the build is sent to Test Flight.",
                         "Android build version code/name update");
 
             }
@@ -299,14 +247,144 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
 
                 }
 
-//                Module[] modules = ModuleManager.getInstance(ProjectManager.getInstance().getOpenProjects()[0]).getSortedModules();
-//                Module module = modules[modules.length-1];
-//                AndroidFacet facet = AndroidFacet.getInstance(module);
-//                String apkPath = AndroidRootUtil.getApkPath(facet);
-//                apkFilePathTextField.setText(apkPath);
+            }
+        });
+
+        moduleCombo.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+
+                // if a module is selected, save the module
+                KeysManager.instance().setSelectedModuleName((String) moduleCombo.getSelectedItem());
+
+                // update the apk path
+                Module module = ModulesManager.instance().getModuleByName((String) moduleCombo.getSelectedItem());
+                apkFilePathTextField.setText(ModulesManager.instance().getAndroidApkPath(module));
+
+                // update the build version fields too
+                updateBuildVersionFields();
 
             }
         });
+
+        // setup the previously saved values on the UI or the default ones
+        setupValuesOnUI();
+
+    }
+
+    /**
+     * Updates the build version(code and name) fields
+     */
+    public void updateBuildVersionFields() {
+        Module module = ModulesManager.instance().getModuleByName((String) moduleCombo.getSelectedItem());
+        // update the code and name text fields manifest build version code and name values
+        buildVCodeTextField.setText(ModulesManager.instance().getBuildVersionCode(ModulesManager.instance().getManifestForModule(module)));
+        buildVNameTextField.setText(ModulesManager.instance().getBuildVersionName(ModulesManager.instance().getManifestForModule(module)));
+
+    }
+
+    /**
+     * Performs validation before uploading the build to test flight, if everything is in order, the build is sent
+     */
+    public void performUploadValidation() {
+
+        if (KeysManager.instance().getApiKey() == null) {
+
+            Messages.showErrorDialog("The Test Flight API token is not set. Please press the 'Set Api Token' button to add your Test Flight API token.",
+                    "Invalid Test Flight API Token");
+
+        } else if (teamList.getSelectedIndex() < 1) {
+
+            Messages.showErrorDialog("Please add/select a team to send the build to.",
+                    "Invalid Test Flight Team");
+
+        } else if (apkFilePathTextField.getText().length() < 3) {
+
+            Messages.showErrorDialog("Please select the apk file to be sent to Test Flight.",
+                    "Invalid Test Flight APK File");
+
+        } else if (whatIsNewTextField.getText().length() < 2) {
+
+            Messages.showErrorDialog("Please add a release note text.",
+                    "Invalid Build Release Notes");
+
+        } else {
+
+            if (buildVersionCheck.isSelected()) {
+
+                Module module = ModulesManager.instance().getModuleByName((String) moduleCombo.getSelectedItem());
+
+                ModulesManager.instance().setBuildVersionNameAndCode(ModulesManager.instance().getManifestForModule(module),
+                        buildVNameTextField.getText(), buildVCodeTextField.getText(), new ModulesManager.ManifestChangesDelegate() {
+                    @Override
+                    public void onVersionValueFinishedUpdate() {
+
+                        uploadBuild();
+
+                    }
+                });
+
+            } else {
+
+                uploadBuild();
+
+            }
+
+        }
+
+    }
+
+    /**
+     * Uploads the build to test flight, it updates also the UI
+     */
+    public void uploadBuild() {
+
+        progressBar.setVisible(true);
+        uploadButton.setEnabled(false);
+        uploadButton.setText("Uploading...");
+
+        // upload the build
+        new UploadService().sendBuild(null, apkFilePathTextField.getText(), KeysManager.instance().getApiKey(),
+                KeysManager.instance().getTeamList().get(teamList.getSelectedIndex()).getToken(),
+                whatIsNewTextField.getText(),
+                KeysManager.instance().getTeamList().get(teamList.getSelectedIndex()).getDistributionList(),
+                notifyTeamCheckBox.isSelected(), TFUploader.this);
+
+    }
+
+    /**
+     * Set the default or previously saved values on the UI components
+     */
+    public void setupValuesOnUI() {
+
+        // if the apk file path was not saved previously by the user, set the saved module apk file path or the best matching module
+        Module previouslySelectedModule = ModulesManager.instance().getModuleByName(KeysManager.instance().getSelectedModuleName());
+        if (previouslySelectedModule != null) {
+
+            apkFilePathTextField.setText(ModulesManager.instance().getAndroidApkPath(previouslySelectedModule));
+
+        } else {
+
+            // get the best matching module for this project and set it's file path
+            previouslySelectedModule = ModulesManager.instance().getMostImportantModule();
+            apkFilePathTextField.setText(ModulesManager.instance().getAndroidApkPath(previouslySelectedModule));
+
+        }
+
+        // set the model of the modules
+        moduleCombo.setModel(new DefaultComboBoxModel(ModulesManager.instance().getAllModuleNamesForCurrentProject()));
+
+        // set the selection
+        moduleCombo.setSelectedIndex(ModulesManager.instance().getSelectedModuleIndex(previouslySelectedModule.getName()));
+
+        // set the distribution list input disabled by default
+        distributionsListTextArea.setEnabled(false);
+
+        // hide the build version change feature components by default
+        setBuildFeatureComponentsVisible(false);
+
+        // update the build version fields
+        updateBuildVersionFields();
 
     }
 
@@ -319,7 +397,6 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
 
         bVersionCodeLbl.setVisible(visible);
         bVersionNameLbl.setVisible(visible);
-        manifestPathLbl.setVisible(visible);
         buildVCodeTextField.setVisible(visible);
         buildVNameTextField.setVisible(visible);
 
@@ -346,7 +423,6 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
     }
 
     public void createToolWindowContent(Project project, ToolWindow toolWindow) {
-        myToolWindow = toolWindow;
 
         ContentFactory contentFactory = ContentFactory.SERVICE.getInstance();
         Content content = contentFactory.createContent(mainPanel, "", false);
@@ -360,6 +436,7 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
     @Override
     public void onUploadFinished(final boolean finishedSuccessful) {
 
+        // upload is now finished, run some UI updates on the UI thread
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
 

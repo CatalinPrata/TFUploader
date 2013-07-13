@@ -71,20 +71,6 @@
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="module-library">
-      <library>
-        <ANNOTATIONS>
-          <root url="jar://$MODULE_DIR$/../../../idea/androidAnnotations.jar!/" />
-        </ANNOTATIONS>
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/../../../idea/android-common.jar!/" />
-          <root url="jar://$MODULE_DIR$/../../../idea/android-rt.jar!/" />
-          <root url="jar://$MODULE_DIR$/../../../idea/android.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
   </component>
 </module>
 

@@ -54,6 +54,7 @@ public class KeysManager implements PersistentStateComponent<Element> {
     public static final String XML_ROOT_NAME_API_KEY = "ApiKey";
     // xml parsing constant used for the apk file path
     public static final String XML_ROOT_NAME_APK_FILE_PATH = "ApkFilePath";
+    public static final String XML_ROOT_NAME_SELECTED_MODULE_NAME = "SelectedModuleName";
     /**
      * Manager's single instance
      */
@@ -70,6 +71,10 @@ public class KeysManager implements PersistentStateComponent<Element> {
      * Project apk file path
      */
     private String apkFilePath;
+    /**
+     * This is the user selected module name
+     */
+    private String selectedModuleName;
 
     public KeysManager() {
 
@@ -126,6 +131,13 @@ public class KeysManager implements PersistentStateComponent<Element> {
             rootTag.addContent(filePathTag);
         }
 
+        if (selectedModuleName != null) {
+            // set the user selected module
+            Element moduleName = new Element(XML_ROOT_NAME_SELECTED_MODULE_NAME).setText(selectedModuleName);
+            rootTag.addContent(moduleName);
+
+        }
+
         return rootTag;
     }
 
@@ -159,11 +171,27 @@ public class KeysManager implements PersistentStateComponent<Element> {
                     // parse the apk file path
                     apkFilePath = parseApkFilePath(rootElement);
 
+                } else if (rootElement.getName().equals(XML_ROOT_NAME_SELECTED_MODULE_NAME)) {
+                    // parse the user selected module name
+                    selectedModuleName = parseUserSelectedModuleName(rootElement);
+
                 }
 
             }
 
         }
+
+    }
+
+    /**
+     * Parse the user's selected module name xml element
+     *
+     * @param element the user's selected module element
+     * @return parsed value
+     */
+    public String parseUserSelectedModuleName(Element element) {
+
+        return element.getText();
 
     }
 
@@ -351,5 +379,23 @@ public class KeysManager implements PersistentStateComponent<Element> {
      */
     public void setApkFilePath(String apkFilePath) {
         this.apkFilePath = apkFilePath;
+    }
+
+    /**
+     * Returns the user's selected module name, null if none was saved so far
+     *
+     * @return user's selected module name
+     */
+    public String getSelectedModuleName() {
+        return selectedModuleName;
+    }
+
+    /**
+     * Set the user's selected module name, used to get the apk file path for the module
+     *
+     * @param selectedModuleName selected module name
+     */
+    public void setSelectedModuleName(String selectedModuleName) {
+        this.selectedModuleName = selectedModuleName;
     }
 }
