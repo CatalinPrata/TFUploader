@@ -1,7 +1,7 @@
 <idea-plugin version="2">
     <id>ro.catalin.prata.tfuploader</id>
     <name>TF Uploader</name>
-    <version>1.0</version>
+    <version>1.5</version>
     <vendor email="prata.catalin@gmail.com" url="http://myandroidsolutions.blogspot.ro/">My Blog</vendor>
 
     <description><![CDATA[
@@ -10,7 +10,9 @@
       ]]></description>
 
     <change-notes><![CDATA[
-      First release, please send bug reports to my email so I can make this plugin better.
+      Added: <br />
+- module support (the apk file path is updated accordingly to the selected module) <br />
+- android project version code and name edit
       ]]>
     </change-notes>
 
