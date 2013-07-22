@@ -55,6 +55,7 @@ public class KeysManager implements PersistentStateComponent<Element> {
     // xml parsing constant used for the apk file path
     public static final String XML_ROOT_NAME_APK_FILE_PATH = "ApkFilePath";
     public static final String XML_ROOT_NAME_SELECTED_MODULE_NAME = "SelectedModuleName";
+    public static final String XML_ROOT_NAME_SELECTED_PROJECT_NAME = "SelectedProjectName";
     /**
      * Manager's single instance
      */
@@ -75,6 +76,10 @@ public class KeysManager implements PersistentStateComponent<Element> {
      * This is the user selected module name
      */
     private String selectedModuleName;
+    /**
+     * This is the user selected project name
+     */
+    private String selectedProjectName;
 
     public KeysManager() {
 
@@ -138,6 +143,13 @@ public class KeysManager implements PersistentStateComponent<Element> {
 
         }
 
+        if (selectedProjectName != null) {
+            // set the user selected project
+            Element projectName = new Element(XML_ROOT_NAME_SELECTED_PROJECT_NAME).setText(selectedProjectName);
+            rootTag.addContent(projectName);
+
+        }
+
         return rootTag;
     }
 
@@ -175,11 +187,27 @@ public class KeysManager implements PersistentStateComponent<Element> {
                     // parse the user selected module name
                     selectedModuleName = parseUserSelectedModuleName(rootElement);
 
+                } else if (rootElement.getName().equals(XML_ROOT_NAME_SELECTED_PROJECT_NAME)) {
+                    // parse the user selected project name
+                    selectedProjectName = parseUserSelectedProjectName(rootElement);
+
                 }
 
             }
 
         }
+
+    }
+
+    /**
+     * Parse the user's selected project name xml element
+     *
+     * @param element the user's selected project element
+     * @return parsed value
+     */
+    public String parseUserSelectedProjectName(Element element) {
+
+        return element.getText();
 
     }
 
@@ -397,5 +425,23 @@ public class KeysManager implements PersistentStateComponent<Element> {
      */
     public void setSelectedModuleName(String selectedModuleName) {
         this.selectedModuleName = selectedModuleName;
+    }
+
+    /**
+     * Returns the selected project name
+     *
+     * @return user's selected project name
+     */
+    public String getSelectedProjectName() {
+        return selectedProjectName;
+    }
+
+    /**
+     * Set the selected project name
+     *
+     * @param selectedProjectName user selected project name
+     */
+    public void setSelectedProjectName(String selectedProjectName) {
+        this.selectedProjectName = selectedProjectName;
     }
 }

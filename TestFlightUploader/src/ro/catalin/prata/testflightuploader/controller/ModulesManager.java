@@ -18,6 +18,7 @@ package ro.catalin.prata.testflightuploader.controller;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleManager;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ProjectManager;
 import org.jetbrains.android.dom.manifest.Manifest;
 import org.jetbrains.android.facet.AndroidFacet;
@@ -68,9 +69,9 @@ public class ModulesManager {
      *
      * @return array of module names
      */
-    public String[] getAllModuleNamesForCurrentProject() {
+    public String[] getAllModuleNamesForCurrentProject(Project project) {
 
-        Module[] modules = getModulesForTheMainProject();
+        Module[] modules = getModulesForProject(project);
         String[] moduleNames = new String[modules.length];
 
         int index = 0;
@@ -90,8 +91,8 @@ public class ModulesManager {
      *
      * @return array of modules for the main project
      */
-    public Module[] getModulesForTheMainProject() {
-        Module[] modules = ModuleManager.getInstance(ProjectManager.getInstance().getOpenProjects()[0]).getSortedModules();
+    public Module[] getModulesForProject(Project project) {
+        Module[] modules = ModuleManager.getInstance(project).getSortedModules();
         Module[] sortedModules = new Module[modules.length];
 
         // used to go back from the last module to the first one
@@ -112,8 +113,8 @@ public class ModulesManager {
      * @param moduleName module name
      * @return 0 if the module is not in the list of the current project
      */
-    public int getSelectedModuleIndex(String moduleName) {
-        Module[] modules = getModulesForTheMainProject();
+    public int getSelectedModuleIndexForProject(String moduleName, Project project) {
+        Module[] modules = getModulesForProject(project);
 
         if (modules == null) {
             return 0;
@@ -137,8 +138,8 @@ public class ModulesManager {
      *
      * @return module with the given name or null if not found in this project
      */
-    public Module getModuleByName(String moduleName) {
-        Module[] modules = getModulesForTheMainProject();
+    public Module getModuleByName(String moduleName, Project project) {
+        Module[] modules = getModulesForProject(project);
 
         if (modules == null) {
             return null;
@@ -161,9 +162,9 @@ public class ModulesManager {
      *
      * @return the most important module, which can be a non library module
      */
-    public Module getMostImportantModule() {
+    public Module getMostImportantModuleForProject(Project project) {
 
-        Module[] modules = getModulesForTheMainProject();
+        Module[] modules = getModulesForProject(project);
 
         if (modules == null) {
             return null;
@@ -270,6 +271,82 @@ public class ModulesManager {
     }
 
     /**
+     * Returns the opened projects
+     *
+     * @return the opened projects
+     */
+    public Project[] getOpenedProjects() {
+
+        return ProjectManager.getInstance().getOpenProjects();
+
+    }
+
+    /**
+     * Returns a list of Strings containing the names of the opened projects
+     *
+     * @return list of opened projects names
+     */
+    public String[] getOpenedProjectsNames() {
+
+        Project[] projects = getOpenedProjects();
+
+        String[] projectsNames = new String[projects.length];
+
+        int index = 0;
+        for (Project project : projects) {
+            projectsNames[index] = project.getName();
+            index++;
+        }
+
+        return projectsNames;
+
+    }
+
+    /**
+     * Returns the project object that has the given name
+     *
+     * @param name project name to search for in the list of opened projects
+     * @return project object or null if no project was found with the given name
+     */
+    public Project getProjectByName(String name) {
+
+        if (name == null) {
+            return null;
+        }
+
+        Project projects[] = ProjectManager.getInstance().getOpenProjects();
+
+        for (Project project : projects) {
+            if (project.getName().equals(name)) {
+                return project;
+            }
+        }
+
+        return null;
+
+    }
+
+    /**
+     * Returns the index of the project that has the given name, the project name is searched in the list of opened projects
+     *
+     * @param name name of the project
+     * @return the index of the project in the list of opened projects, 0 if not found
+     */
+    public int getProjectIndexWithName(String name) {
+        int index = 0;
+        Project projects[] = ProjectManager.getInstance().getOpenProjects();
+
+        for (Project project : projects) {
+            if (project.getName().equals(name)) {
+                return index;
+            }
+            index++;
+        }
+
+        return 0;
+    }
+
+    /**
      * Used to notify manifest changes updates as each write action needs to be done on a secondary thread
      */
     public interface ManifestChangesDelegate {
@@ -280,5 +357,6 @@ public class ModulesManager {
         public void onVersionValueFinishedUpdate();
 
     }
+
 
 }
