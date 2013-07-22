@@ -1,8 +1,5 @@
 package ro.catalin.prata.testflightuploader.view;
 
-import com.intellij.openapi.compiler.CompilationStatusListener;
-import com.intellij.openapi.compiler.CompileContext;
-import com.intellij.openapi.compiler.CompilerManager;
 import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.fileTypes.FileType;
@@ -10,6 +7,7 @@ import com.intellij.openapi.fileTypes.FileTypeManager;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ProjectManager;
+import com.intellij.openapi.project.ProjectManagerListener;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.wm.ToolWindow;
@@ -51,14 +49,9 @@ import java.util.List;
  * @author Catalin Prata
  *         Date: 6/1/13
  */
-public class TFUploader implements ToolWindowFactory, UploadService.UploadServiceDelegate, CompilationStatusListener {
+public class TFUploader implements ToolWindowFactory, UploadService.UploadServiceDelegate {
 
-    /**
-     * Maximum number of milliseconds since the last compile time before the user can send the build to Test Flight (currently 5 minutes)
-     */
-    public static final int MAX_MILLISECONDS_SINCE_LAST_COMPILE = 1000 * 60 * 5;
-    // keeps the last compile time so we can see how much time passed since the last build compile
-    private static Calendar lastCompileTime = Calendar.getInstance();
+
     private JButton uploadButton;
     private JPanel mainPanel;
     private JTextArea whatIsNewTextField;
@@ -78,7 +71,7 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
     private JLabel bVersionNameLbl;
     private JComboBox moduleCombo;
     private JTextPane pleaseNoteThatOnlyTextPane;
-    private JComboBox projectCombo;
+    private ToolWindow toolWindow;
 
     public TFUploader() {
 
@@ -261,41 +254,6 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
             }
         });
 
-        projectCombo.addItemListener(new ItemListener() {
-            @Override
-            public void itemStateChanged(ItemEvent e) {
-
-                String projectName = (String) projectCombo.getSelectedItem();
-                // if a project is selected, save the project
-                KeysManager.instance().setSelectedProjectName(projectName);
-
-                Project selectedProject = ModulesManager.instance().getProjectByName(projectName);
-
-                // set the model of the modules
-                moduleCombo.setModel(new DefaultComboBoxModel(ModulesManager.instance().getAllModuleNamesForCurrentProject(selectedProject)));
-                String mainModuleName = ModulesManager.instance().getMostImportantModuleForProject(selectedProject).getName();
-                // set the selection
-                moduleCombo.setSelectedIndex(ModulesManager.instance().getSelectedModuleIndexForProject(mainModuleName,
-                        selectedProject));
-
-                // update the apk path
-                Module module = ModulesManager.instance().getModuleByName((String) moduleCombo.getSelectedItem(), selectedProject);
-
-                KeysManager.instance().setSelectedModuleName(module.getName());
-
-                apkFilePathTextField.setText(ModulesManager.instance().getAndroidApkPath(module));
-
-                // update the build version fields too
-                updateBuildVersionFields();
-
-                // add compile project listener so we can notify the user that he can send the app to Test Flight
-                CompilerManager.getInstance(
-                        ModulesManager.instance().getProjectByName((String) projectCombo.getSelectedItem()))
-                        .addCompilationStatusListener(TFUploader.this);
-
-            }
-        });
-
         moduleCombo.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
@@ -304,8 +262,7 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
                 KeysManager.instance().setSelectedModuleName((String) moduleCombo.getSelectedItem());
 
                 // update the apk path
-                Module module = ModulesManager.instance().getModuleByName((String) moduleCombo.getSelectedItem(),
-                        ModulesManager.instance().getProjectByName((String) projectCombo.getSelectedItem()));
+                Module module = ModulesManager.instance().getModuleByName((String) moduleCombo.getSelectedItem());
                 apkFilePathTextField.setText(ModulesManager.instance().getAndroidApkPath(module));
 
                 // update the build version fields too
@@ -323,8 +280,7 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
      * Updates the build version(code and name) fields
      */
     public void updateBuildVersionFields() {
-        Module module = ModulesManager.instance().getModuleByName((String) moduleCombo.getSelectedItem(),
-                ModulesManager.instance().getProjectByName((String) projectCombo.getSelectedItem()));
+        Module module = ModulesManager.instance().getModuleByName((String) moduleCombo.getSelectedItem());
         // update the code and name text fields manifest build version code and name values
         buildVCodeTextField.setText(ModulesManager.instance().getBuildVersionCode(ModulesManager.instance().getManifestForModule(module)));
         buildVNameTextField.setText(ModulesManager.instance().getBuildVersionName(ModulesManager.instance().getManifestForModule(module)));
@@ -336,14 +292,16 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
      */
     public void performUploadValidation() {
 
-        if (Calendar.getInstance().getTimeInMillis() - lastCompileTime.getTimeInMillis() > MAX_MILLISECONDS_SINCE_LAST_COMPILE) {
+        if (Calendar.getInstance().getTimeInMillis() - KeysManager.getLastCompileTime().getTimeInMillis() >
+                KeysManager.MAX_MILLISECONDS_SINCE_LAST_COMPILE) {
 
-            Messages.showErrorDialog("Please note that the project was not compiled since at least " + (MAX_MILLISECONDS_SINCE_LAST_COMPILE / 1000 / 60) + " minutes ago. " +
+            Messages.showErrorDialog("Please note that the project was not compiled since at least " +
+                    (KeysManager.MAX_MILLISECONDS_SINCE_LAST_COMPILE / 1000 / 60) + " minutes ago. " +
                     "If you made changes since then, please rebuild the project to generate the new APK file and upload the latest build to Test Flight.",
                     "Possible Old Build");
 
             // display this message only once to the user
-            lastCompileTime = Calendar.getInstance();
+            KeysManager.setLastCompileTime(Calendar.getInstance());
 
         } else if (KeysManager.instance().getApiKey() == null) {
 
@@ -369,8 +327,7 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
 
             if (buildVersionCheck.isSelected()) {
 
-                Module module = ModulesManager.instance().getModuleByName((String) moduleCombo.getSelectedItem(),
-                        ModulesManager.instance().getProjectByName((String) projectCombo.getSelectedItem()));
+                Module module = ModulesManager.instance().getModuleByName((String) moduleCombo.getSelectedItem());
 
                 ModulesManager.instance().setBuildVersionNameAndCode(ModulesManager.instance().getManifestForModule(module),
                         buildVNameTextField.getText(), buildVCodeTextField.getText(), new ModulesManager.ManifestChangesDelegate() {
@@ -415,41 +372,27 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
      */
     public void setupValuesOnUI() {
 
-        Project previouslySelectedProject = ModulesManager.instance().getProjectByName(KeysManager.instance().getSelectedProjectName());
         Module previouslySelectedModule;
 
-        if (previouslySelectedProject != null) {
+        // if the apk file path was not saved previously by the user, set the saved module apk file path or the best matching module
+        previouslySelectedModule = ModulesManager.instance().getModuleByName(KeysManager.instance().getSelectedModuleName());
+        if (previouslySelectedModule != null) {
 
-            // if the apk file path was not saved previously by the user, set the saved module apk file path or the best matching module
-            previouslySelectedModule = ModulesManager.instance().getModuleByName(KeysManager.instance().getSelectedModuleName(), previouslySelectedProject);
-            if (previouslySelectedModule != null) {
-
-                apkFilePathTextField.setText(ModulesManager.instance().getAndroidApkPath(previouslySelectedModule));
-
-            }
+            apkFilePathTextField.setText(ModulesManager.instance().getAndroidApkPath(previouslySelectedModule));
 
         } else {
 
-            // by default we pick the last opened project
-            previouslySelectedProject = ModulesManager.instance().getOpenedProjects()[ModulesManager.instance().getOpenedProjects().length - 1];
-
             // get the best matching module for this project and set it's file path
-            previouslySelectedModule = ModulesManager.instance().getMostImportantModuleForProject(previouslySelectedProject);
+            previouslySelectedModule = ModulesManager.instance().getMostImportantModule();
             apkFilePathTextField.setText(ModulesManager.instance().getAndroidApkPath(previouslySelectedModule));
 
         }
 
-        // set the model of projects combo
-        projectCombo.setModel(new DefaultComboBoxModel(ModulesManager.instance().getOpenedProjectsNames()));
-
-        projectCombo.setSelectedIndex(ModulesManager.instance().getProjectIndexWithName(previouslySelectedProject.getName()));
-
         // set the model of the modules
-        moduleCombo.setModel(new DefaultComboBoxModel(ModulesManager.instance().getAllModuleNamesForCurrentProject(previouslySelectedProject)));
+        moduleCombo.setModel(new DefaultComboBoxModel(ModulesManager.instance().getAllModuleNames()));
 
         // set the selection
-        moduleCombo.setSelectedIndex(ModulesManager.instance().getSelectedModuleIndexForProject(previouslySelectedModule.getName(),
-                previouslySelectedProject));
+        moduleCombo.setSelectedIndex(ModulesManager.instance().getSelectedModuleIndex(previouslySelectedModule.getName()));
 
         // set the distribution list input disabled by default
         distributionsListTextArea.setEnabled(false);
@@ -501,6 +444,44 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
         ContentFactory contentFactory = ContentFactory.SERVICE.getInstance();
         Content content = contentFactory.createContent(mainPanel, "", false);
         toolWindow.getContentManager().addContent(content);
+
+        this.toolWindow = toolWindow;
+
+        ProjectManager.getInstance().addProjectManagerListener(new ProjectManagerListener() {
+            @Override
+            public void projectOpened(Project project) {
+
+                // get the best matching module for this project and set it's file path
+                Module previouslySelectedModule = ModulesManager.instance().getMostImportantModule();
+                apkFilePathTextField.setText(ModulesManager.instance().getAndroidApkPath(previouslySelectedModule));
+
+                KeysManager.instance().setSelectedModuleName(previouslySelectedModule.getName());
+
+                // set the model of the modules
+                moduleCombo.setModel(new DefaultComboBoxModel(ModulesManager.instance().getAllModuleNames()));
+
+                // set the selection
+                moduleCombo.setSelectedIndex(ModulesManager.instance().getSelectedModuleIndex(previouslySelectedModule.getName()));
+
+            }
+
+            @Override
+            public boolean canCloseProject(Project project) {
+                return true;
+            }
+
+            @Override
+            public void projectClosed(Project project) {
+
+
+            }
+
+            @Override
+            public void projectClosing(Project project) {
+
+            }
+        });
+
     }
 
     private void createUIComponents() {
@@ -555,21 +536,4 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
 
     }
 
-    @Override
-    public void compilationFinished(boolean aborted, int errors, int warnings, CompileContext compileContext) {
-
-        if (errors < 1) {
-
-            // get the current time
-            lastCompileTime = Calendar.getInstance();
-
-
-        }
-
-    }
-
-    @Override
-    public void fileGenerated(String outputRoot, String relativePath) {
-
-    }
 }

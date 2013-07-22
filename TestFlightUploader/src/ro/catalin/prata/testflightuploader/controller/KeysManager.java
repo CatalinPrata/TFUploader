@@ -1,15 +1,34 @@
 package ro.catalin.prata.testflightuploader.controller;
 
+import com.intellij.openapi.compiler.CompilationStatusListener;
+import com.intellij.openapi.compiler.CompileContext;
+import com.intellij.openapi.compiler.CompilerManager;
 import com.intellij.openapi.components.PersistentStateComponent;
 import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
+import com.intellij.openapi.module.Module;
+import com.intellij.openapi.project.Project;
+import com.intellij.openapi.project.ProjectManager;
+import com.intellij.openapi.project.ProjectManagerListener;
+import com.intellij.openapi.ui.MessageType;
+import com.intellij.openapi.ui.popup.Balloon;
+import com.intellij.openapi.ui.popup.JBPopupFactory;
+import com.intellij.openapi.wm.StatusBar;
+import com.intellij.openapi.wm.ToolWindowManager;
+import com.intellij.openapi.wm.WindowManager;
+import com.intellij.ui.awt.RelativePoint;
 import org.jdom.Element;
 import org.jetbrains.annotations.Nullable;
 import ro.catalin.prata.testflightuploader.Model.Team;
 import ro.catalin.prata.testflightuploader.utils.Constants;
+import ro.catalin.prata.testflightuploader.view.TFUploader;
 
+import javax.swing.*;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Iterator;
 
 /*  Copyright 2013 Catalin Prata
@@ -39,7 +58,7 @@ import java.util.Iterator;
                 id = "other",
                 file = "$APP_CONFIG$/" + Constants.PERSISTENCE_FILE_NAME)
 })
-public class KeysManager implements PersistentStateComponent<Element> {
+public class KeysManager implements PersistentStateComponent<Element>,CompilationStatusListener {
 
     // xml parsing constant used as a root tag for this class
     public static final String XML_ROOT_NAME_Key_MANAGER = "KeyManager";
@@ -56,6 +75,12 @@ public class KeysManager implements PersistentStateComponent<Element> {
     public static final String XML_ROOT_NAME_APK_FILE_PATH = "ApkFilePath";
     public static final String XML_ROOT_NAME_SELECTED_MODULE_NAME = "SelectedModuleName";
     public static final String XML_ROOT_NAME_SELECTED_PROJECT_NAME = "SelectedProjectName";
+    /**
+     * Maximum number of milliseconds since the last compile time before the user can send the build to Test Flight (currently 5 minutes)
+     */
+    public static final int MAX_MILLISECONDS_SINCE_LAST_COMPILE = 1000 * 60 * 5;
+    // keeps the last compile time so we can see how much time passed since the last build compile
+    private static Calendar lastCompileTime = Calendar.getInstance();
     /**
      * Manager's single instance
      */
@@ -91,6 +116,37 @@ public class KeysManager implements PersistentStateComponent<Element> {
 
         if (sInstance == null) {
             sInstance = ServiceManager.getService(KeysManager.class);
+
+            ProjectManager.getInstance().addProjectManagerListener(new ProjectManagerListener() {
+                @Override
+                public void projectOpened(Project project) {
+
+                    CompilerManager.getInstance(project)
+                            .addCompilationStatusListener(sInstance);
+
+                }
+
+                @Override
+                public boolean canCloseProject(Project project) {
+                    return true;
+                }
+
+                @Override
+                public void projectClosed(Project project) {
+
+                }
+
+                @Override
+                public void projectClosing(Project project) {
+
+                    CompilerManager.getInstance(project)
+                            .removeCompilationStatusListener(sInstance);
+
+                }
+            });
+
+            CompilerManager.getInstance(ProjectManager.getInstance().getOpenProjects()[0])
+                    .addCompilationStatusListener(sInstance);
         }
 
         return sInstance;
@@ -443,5 +499,51 @@ public class KeysManager implements PersistentStateComponent<Element> {
      */
     public void setSelectedProjectName(String selectedProjectName) {
         this.selectedProjectName = selectedProjectName;
+    }
+
+    public static Calendar getLastCompileTime() {
+        return lastCompileTime;
+    }
+
+    public static void setLastCompileTime(Calendar lastCompileTime) {
+        KeysManager.lastCompileTime = lastCompileTime;
+    }
+
+    @Override
+    public void compilationFinished(boolean aborted, int errors, int warnings, CompileContext compileContext) {
+
+        if (errors < 1) {
+
+            // get the current time
+            lastCompileTime = Calendar.getInstance();
+
+            StatusBar statusBar = WindowManager.getInstance()
+                    .getStatusBar(ProjectManager.getInstance().getOpenProjects()[0]);
+
+
+            JBPopupFactory.getInstance()
+                    .createHtmlTextBalloonBuilder("Build ready to be sent to TestFlight, <a href='open'>Click Here</a> to open TestFlightUploader and send it.",
+                            MessageType.INFO, new HyperlinkListener() {
+                        @Override
+                        public void hyperlinkUpdate(HyperlinkEvent e) {
+
+                            if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
+                                ToolWindowManager.getInstance(ProjectManager.getInstance().getOpenProjects()[0]).getToolWindow("TF Uploader").show(null);
+                            }
+
+                        }
+                    })
+                    .setFadeoutTime(4000)
+                    .createBalloon()
+                    .show(RelativePoint.getNorthEastOf(statusBar.getComponent()),
+                            Balloon.Position.atRight);
+
+        }
+
+    }
+
+    @Override
+    public void fileGenerated(String outputRoot, String relativePath) {
+
     }
 }

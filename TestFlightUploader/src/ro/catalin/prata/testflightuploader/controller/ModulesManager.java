@@ -69,6 +69,121 @@ public class ModulesManager {
      *
      * @return array of module names
      */
+    public String[] getAllModuleNames() {
+
+        Module[] modules = getModules();
+        String[] moduleNames = new String[modules.length];
+
+        int index = 0;
+        for (Module module : modules) {
+
+            moduleNames[index] = module.getName();
+            index++;
+        }
+
+        return moduleNames;
+
+    }
+
+    /**
+     * Returns all modules found in the main project,
+     * which is the first opened project if there are more than one projects opened at a time
+     *
+     * @return array of modules for the main project
+     */
+    public Module[] getModules() {
+        Module[] modules = ModuleManager.getInstance(ProjectManager.getInstance().getOpenProjects()[0]).getSortedModules();
+        Module[] sortedModules = new Module[modules.length];
+
+        // used to go back from the last module to the first one
+        int reverseIndex = modules.length - 1;
+
+        // loop through all the modules and add the in a reverse order in the sorted array
+        for (int index = 0; index < modules.length; index++) {
+            sortedModules[index] = modules[reverseIndex];
+            reverseIndex--;
+        }
+
+        return sortedModules;
+    }
+
+    /**
+     * Returns the index of the selected module in the project modules list, if the module is not present here, 0 is returned
+     *
+     * @param moduleName module name
+     * @return 0 if the module is not in the list of the current project
+     */
+    public int getSelectedModuleIndex(String moduleName) {
+        Module[] modules = getModules();
+
+        if (modules == null) {
+            return 0;
+        }
+
+        int index = 0;
+        for (Module module : modules) {
+
+            if (module.getName().equals(moduleName)) {
+                return index;
+            }
+
+            index++;
+        }
+
+        return 0;
+    }
+
+    /**
+     * Returns the module that is not(or the less) used by the other modules, this way we avoid getting library modules
+     *
+     * @return the most important module, which can be a non library module
+     */
+    public Module getMostImportantModule() {
+
+        Module[] modules = getModules();
+
+        if (modules == null) {
+            return null;
+        } else {
+
+            // the last one is the one that is not used by the other modules
+            // or is the most absent from the other modules dependency
+            return modules[0];
+
+        }
+
+    }
+
+    /**
+     * Returns a module from the main project that has the given name
+     *
+     * @return module with the given name or null if not found in this project
+     */
+    public Module getModuleByName(String moduleName) {
+        Module[] modules = getModulesForProject(ProjectManager.getInstance().getOpenProjects()[0]);
+
+        if (modules == null) {
+            return null;
+        }
+
+        for (Module module : modules) {
+
+            if (module.getName().equals(moduleName)) {
+                return module;
+            }
+
+        }
+
+        return null;
+
+    }
+
+    /**
+     * Returns an array of module names for the current project
+     *
+     * @return array of module names
+     */
+    @Deprecated
     public String[] getAllModuleNamesForCurrentProject(Project project) {
 
         Module[] modules = getModulesForProject(project);
@@ -91,6 +206,7 @@ public class ModulesManager {
      *
      * @return array of modules for the main project
      */
+    @Deprecated
     public Module[] getModulesForProject(Project project) {
         Module[] modules = ModuleManager.getInstance(project).getSortedModules();
         Module[] sortedModules = new Module[modules.length];
@@ -113,6 +229,7 @@ public class ModulesManager {
      * @param moduleName module name
      * @return 0 if the module is not in the list of the current project
      */
+    @Deprecated
     public int getSelectedModuleIndexForProject(String moduleName, Project project) {
         Module[] modules = getModulesForProject(project);
 
@@ -138,6 +255,7 @@ public class ModulesManager {
      *
      * @return module with the given name or null if not found in this project
      */
+    @Deprecated
     public Module getModuleByName(String moduleName, Project project) {
         Module[] modules = getModulesForProject(project);
 
@@ -162,6 +280,7 @@ public class ModulesManager {
      *
      * @return the most important module, which can be a non library module
      */
+    @Deprecated
     public Module getMostImportantModuleForProject(Project project) {
 
         Module[] modules = getModulesForProject(project);
