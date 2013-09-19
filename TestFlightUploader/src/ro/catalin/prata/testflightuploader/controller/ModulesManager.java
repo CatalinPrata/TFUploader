@@ -60,6 +60,10 @@ public class ModulesManager {
      */
     public String getAndroidApkPath(Module module) {
 
+        if (module == null || AndroidFacet.getInstance(module) == null) {
+            return null;
+        }
+
         return AndroidRootUtil.getApkPath(AndroidFacet.getInstance(module));
 
     }
@@ -72,6 +76,11 @@ public class ModulesManager {
     public String[] getAllModuleNames() {
 
         Module[] modules = getModules();
+
+        if (modules == null) {
+            return null;
+        }
+
         String[] moduleNames = new String[modules.length];
 
         int index = 0;
@@ -116,7 +125,7 @@ public class ModulesManager {
     public int getSelectedModuleIndex(String moduleName) {
         Module[] modules = getModules();
 
-        if (modules == null) {
+        if (modules == null || moduleName == null) {
             return 0;
         }
 
@@ -305,6 +314,10 @@ public class ModulesManager {
      */
     public Manifest getManifestForModule(final Module module) {
 
+        if (module == null || AndroidFacet.getInstance(module) == null) {
+            return null;
+        }
+
         return AndroidFacet.getInstance(module).getManifest();
 
     }
@@ -316,6 +329,12 @@ public class ModulesManager {
      * @return the current manifest version name value
      */
     public String getBuildVersionName(Manifest manifest) {
+
+        if (manifest == null || manifest.getXmlTag() == null
+                || manifest.getXmlTag().getAttribute(ANDROID_VERSION_NAME) == null) {
+            return null;
+        }
+
         return manifest.getXmlTag().getAttribute(ANDROID_VERSION_NAME).getValue();
     }
 
@@ -328,7 +347,12 @@ public class ModulesManager {
      * @param newValue new version name value
      */
     private void setBuildVersionName(Manifest manifest, String newValue) {
-        manifest.getXmlTag().getAttribute(ANDROID_VERSION_NAME).setValue(newValue);
+
+        if (manifest != null && newValue != null && manifest.getXmlTag() != null
+                && manifest.getXmlTag().getAttribute(ANDROID_VERSION_NAME) != null) {
+            manifest.getXmlTag().getAttribute(ANDROID_VERSION_NAME).setValue(newValue);
+        }
+
     }
 
     /**
@@ -341,6 +365,10 @@ public class ModulesManager {
      */
     public void setBuildVersionNameAndCode(final Manifest manifest, final String newVersionNameValue,
                                            final String newVersionCodeValue, final ManifestChangesDelegate delegate) {
+
+        if (manifest == null) {
+            return;
+        }
 
         // open a write action environment so we can update the manifest file
         ApplicationManager.getApplication().runWriteAction(new Runnable() {
@@ -374,8 +402,10 @@ public class ModulesManager {
      */
     private void setBuildVersionCode(Manifest manifest, String newValue) {
 
-        manifest.getXmlTag().getAttribute(ANDROID_VERSION_CODE).setValue(newValue);
-
+        if (manifest != null && newValue != null && manifest.getXmlTag() != null
+                && manifest.getXmlTag().getAttribute(ANDROID_VERSION_CODE) != null) {
+            manifest.getXmlTag().getAttribute(ANDROID_VERSION_CODE).setValue(newValue);
+        }
 
     }
 
@@ -386,6 +416,12 @@ public class ModulesManager {
      * @return android build version code
      */
     public String getBuildVersionCode(Manifest manifest) {
+
+        if (manifest == null || manifest.getXmlTag() == null ||
+                manifest.getXmlTag().getAttribute(ANDROID_VERSION_CODE) == null) {
+            return null;
+        }
+
         return manifest.getXmlTag().getAttribute(ANDROID_VERSION_CODE).getValue();
     }
 

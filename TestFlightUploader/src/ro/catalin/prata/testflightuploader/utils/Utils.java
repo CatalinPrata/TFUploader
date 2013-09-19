@@ -27,6 +27,20 @@ import com.intellij.openapi.vfs.VirtualFile;
 public class Utils {
 
     /**
+     * Checks if the given string is null and if it is, it returns an empty string
+     *
+     * @param string can be null
+     * @return empty string if the string is null, the passed string otherwise
+     */
+    public static String validateString(String string) {
+        if (string == null) {
+            return "";
+        } else {
+            return string;
+        }
+    }
+
+    /**
      * Used to build a FileChooserDescriptor object with the given FileType and has the following options enabled:
      * - controls whether files can be chosen
      * - controls whether folders can be chosen

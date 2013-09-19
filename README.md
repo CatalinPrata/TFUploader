@@ -21,6 +21,10 @@ Added:
 - android project version code and name edit
 - android.jar dependency so we can get the manifest file of the project
 
+V 2.5
+Added:
+- bug fixes for Android Studio and gradle projects
+
 
 TFUploader - simple way to upload Android builds to Test Flight from IntellijIDEA
 

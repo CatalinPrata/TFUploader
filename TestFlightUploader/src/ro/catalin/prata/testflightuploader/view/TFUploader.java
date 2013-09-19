@@ -282,8 +282,11 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
     public void updateBuildVersionFields() {
         Module module = ModulesManager.instance().getModuleByName((String) moduleCombo.getSelectedItem());
         // update the code and name text fields manifest build version code and name values
-        buildVCodeTextField.setText(ModulesManager.instance().getBuildVersionCode(ModulesManager.instance().getManifestForModule(module)));
-        buildVNameTextField.setText(ModulesManager.instance().getBuildVersionName(ModulesManager.instance().getManifestForModule(module)));
+        buildVCodeTextField.setText(Utils.validateString(
+                ModulesManager.instance().getBuildVersionCode(ModulesManager.instance().getManifestForModule(module))));
+
+        buildVNameTextField.setText(Utils.validateString(
+                ModulesManager.instance().getBuildVersionName(ModulesManager.instance().getManifestForModule(module))));
 
     }
 
@@ -453,12 +456,16 @@ public class TFUploader implements ToolWindowFactory, UploadService.UploadServic
 
                 // get the best matching module for this project and set it's file path
                 Module previouslySelectedModule = ModulesManager.instance().getMostImportantModule();
-                apkFilePathTextField.setText(ModulesManager.instance().getAndroidApkPath(previouslySelectedModule));
+                apkFilePathTextField.setText(Utils.validateString(
+                        ModulesManager.instance().getAndroidApkPath(previouslySelectedModule)));
 
                 KeysManager.instance().setSelectedModuleName(previouslySelectedModule.getName());
 
-                // set the model of the modules
-                moduleCombo.setModel(new DefaultComboBoxModel(ModulesManager.instance().getAllModuleNames()));
+                String[] modules = ModulesManager.instance().getAllModuleNames();
+                if (modules != null) {
+                    // set the model of the modules
+                    moduleCombo.setModel(new DefaultComboBoxModel(ModulesManager.instance().getAllModuleNames()));
+                }
 
                 // set the selection
                 moduleCombo.setSelectedIndex(ModulesManager.instance().getSelectedModuleIndex(previouslySelectedModule.getName()));
